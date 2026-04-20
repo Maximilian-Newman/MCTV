@@ -1,3 +1,30 @@
+/*Copyright (c) 2026 Maximilian Newman Loussouarn
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+
+Fonts from: https://github.com/Avamander/arduino-tvout
+*/
+
+
+
 
 #include <TVout.h>
 #include "fontALL.h"
@@ -86,6 +113,8 @@ void setup(){
   TV.begin(PAL, 200, 200);
   mainScreen();
   Serial3.begin(115200);
+  Serial.begin(115200);
+  Serial3.print("DISCONNECT\n");
 }
 
 void loop(){
@@ -118,7 +147,6 @@ void loop(){
         TV.print(connectedAddress[i], HEX);
         TV.print(" ");
       }
-
     }
 
     else if (command == "DISCONNECT"){
@@ -129,6 +157,12 @@ void loop(){
       mainScreen();
     }
 
+
+
+    else if (command == "PING") {
+      Serial3.print("PING\n");
+    }
+
     else if (command == "NAME") {
       Serial3.print("NAME:" + DEVICE_NAME + "\n");
     }
@@ -137,8 +171,8 @@ void loop(){
       Serial3.print("TYPE:" + DEVICE_TYPE + "\n");
     }
 
-    else if (command == "PING") {
-      Serial3.print("PING\n");
+    else if (!isConnected()) {
+      Serial3.print("DISCONNECT\n");
     }
 
 
@@ -153,13 +187,29 @@ void loop(){
       TV.clear_screen();
     }
 
-    else if (command.startsWith("TV.LINE")) {
+    else if (command == "TV.LINE") {
       int x1 = Serial3.readStringUntil(',').toInt();
       int y1 = Serial3.readStringUntil(',').toInt();
       int x2 = Serial3.readStringUntil(',').toInt();
       int y2 = Serial3.readStringUntil(',').toInt();
       byte c = Serial3.readStringUntil('\n').toInt();
       TV.draw_line(x1, y1, x2, y2, c);
+    }
+
+    else if (command == "TV.PRINT") {
+      int x = Serial3.readStringUntil(',').toInt();
+      int y = Serial3.readStringUntil(',').toInt();
+      byte fontNum = Serial3.readStringUntil(',').toInt();
+      byte c = Serial3.readStringUntil(',').toInt();
+      String s = Serial3.readStringUntil('\n');
+
+      if (fontNum == 1) {TV.select_font(font4x6);}
+      else if (fontNum == 2) {TV.select_font(font6x8);}
+      else if (fontNum == 3) {TV.select_font(font8x8);}
+      else if (fontNum == 4) {TV.select_font(font8x8ext);}
+
+      TV.set_cursor(x, y);
+      print(s);
     }
 
 
