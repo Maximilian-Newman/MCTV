@@ -165,12 +165,12 @@ void setup(){
 
 void loop(){
   TV.delay_frame(1);
-  
+
   if (Serial3.available()){
     lastPing = millis();
     String command = Serial3.readStringUntil('\n');
     Serial.println("COMMAND: " + command);
-    if (command != "PING") {Serial3.write('1');}
+    if (command != "PING") {Serial3.println('1');}
     
 
 
