@@ -141,6 +141,11 @@ void updateTopBar() {
     print(tvMode);
   }
   TV.draw_line(0, 7, 199, 7, 1);
+
+  if (millis() - lastPing > 9000) {
+    TV.set_cursor(196, 0);
+    TV.print('!');
+  }
   lastTopBarUpdate = millis();
 }
 
@@ -160,7 +165,7 @@ void setup(){
   Serial3.begin(115200);
   Serial.begin(115200);
   Serial3.print("DISCONNECT\n");
-  Serial3.setTimeout(50);
+  //Serial3.setTimeout(50);
 }
 
 void loop(){
@@ -170,7 +175,7 @@ void loop(){
     lastPing = millis();
     String command = Serial3.readStringUntil('\n');
     Serial.println("COMMAND: " + command);
-    if (command != "PING") {Serial3.println('1');}
+    if (command != "PING") {Serial3.print("1\n");}
     
 
 
@@ -178,25 +183,7 @@ void loop(){
     if (command == "CONNECT"){
       Serial.println();
       convertMAC(Serial3.readStringUntil('\n'), connectedAddress);
-      
-      for (byte i=0; i<6; i++){
-        Serial.print(connectedAddress[i], HEX);
-        Serial.print(" ");
-      }
-      Serial.println();
-
       TV.clear_screen();
-      TV.select_font(font8x8);
-      TV.set_cursor(90, 0);
-      TV.print("MCTV");
-      TV.select_font(font6x8);
-      TV.set_cursor(30, 50);
-      TV.print("Succesfully connected!");
-      TV.set_cursor(70, 100);
-      for (byte i=0; i<6; i++){
-        TV.print(connectedAddress[i], HEX);
-        TV.print(" ");
-      }
     }
 
     else if (command == "DISCONNECT"){
@@ -237,7 +224,7 @@ void loop(){
       int y1 = Serial3.readStringUntil(',').toInt() + 8;
       int x2 = Serial3.readStringUntil(',').toInt();
       int y2 = Serial3.readStringUntil(',').toInt() + 8;
-      byte c = Serial3.readStringUntil('\n').toInt();
+      byte c = Serial3.readStringUntil('\n').toInt() - '0';
       TV.draw_line(x1, y1, x2, y2, c);
 
       debugParams(x1, y1, x2, y2, c);
@@ -248,7 +235,7 @@ void loop(){
       byte y1 = Serial3.readStringUntil(',').toInt() + 8;
       byte x2 = Serial3.readStringUntil(',').toInt();
       byte y2 = Serial3.readStringUntil(',').toInt() + 8;
-      byte c = Serial3.readStringUntil('\n').toInt();
+      byte c = Serial3.readStringUntil('\n').toInt() - '0';
 
       if (x1 > x2){
         byte temp = x1;
@@ -271,7 +258,7 @@ void loop(){
       int y1 = Serial3.readStringUntil(',').toInt() + 8;
       int x2 = Serial3.readStringUntil(',').toInt();
       int y2 = Serial3.readStringUntil(',').toInt() + 8;
-      byte c = Serial3.readStringUntil('\n').toInt();
+      byte c = Serial3.readStringUntil('\n').toInt() - '0';
 
       if (x1 > x2){
         byte temp = x1;
@@ -291,14 +278,14 @@ void loop(){
     else if (command == "TV.PIXEL") {
       int x = Serial3.readStringUntil(',').toInt();
       int y = Serial3.readStringUntil(',').toInt() + 8;
-      byte c = Serial3.readStringUntil('\n').toInt();
+      byte c = Serial3.readStringUntil('\n').toInt() - '0';
       TV.set_pixel(x, y, c);
 
       debugParams(x, y, 0, 0, c);
     }
 
     else if (command == "TV.CLEAR") {
-      byte c = Serial3.readStringUntil('\n').toInt();
+      byte c = Serial3.readStringUntil('\n').toInt() - '0';
       fillRect(0, 8, 199, 199, c);
       
       debugParams(0, 0, 0, 0, c);
@@ -323,6 +310,35 @@ void loop(){
       tvMode = Serial3.readStringUntil('\n');
     }
 
+    else if (command == "TV.BIM") {
+      byte x0 = Serial3.readStringUntil(',').toInt();
+      byte y0 = Serial3.readStringUntil(',').toInt() + 8;
+      byte width = Serial3.readStringUntil(',').toInt();
+      byte height = Serial3.readStringUntil(',').toInt();
+
+      Serial.println(x0);
+      Serial.println(y0);
+      Serial.println(width);
+      Serial.println(height);
+
+      for (byte y=y0; y<y0+height; y++) {
+        for (byte x = x0; x<x0+width; x++) {
+          byte timeoutCounter = 0;
+          while (!Serial3.available()) {
+            timeoutCounter += 1;
+            delay(1);
+            if (timeoutCounter > 250) {goto SKIP_BIM;}
+          }
+          byte c = Serial3.read() - '0';
+          Serial.print(c);
+
+          if (c<3) {TV.set_pixel(x, y, c);}
+        }
+        Serial.println(" <-");
+      }
+    }
+
+
 
 
 
@@ -334,6 +350,8 @@ void loop(){
       Serial.println("unknown command: " + command);
     }
   }
+
+  SKIP_BIM:
 
 
   if (millis() - lastPing > 60000 and isConnected()) {
